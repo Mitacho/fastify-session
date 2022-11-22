@@ -171,7 +171,10 @@ fastify.post("/logout", async (request, reply) => {
 // init
 const start = async () => {
   try {
-    await fastify.listen({ port: Number(process.env.PORT) || 4000 });
+    await fastify.listen({
+      host: "0.0.0.0",
+      port: Number(process.env.PORT) || 4000,
+    });
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
