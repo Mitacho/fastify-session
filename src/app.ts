@@ -36,7 +36,7 @@ fastify.register(fastifySession, {
   cookie: {
     secure: PRODUCTION ? true : undefined,
     httpOnly: true,
-    sameSite: PRODUCTION ? "lax" : undefined,
+    sameSite: PRODUCTION ? "none" : undefined,
     maxAge: SESSION_TTL,
   },
 });
