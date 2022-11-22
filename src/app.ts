@@ -1,32 +1,42 @@
-import fastifyCookie from "@fastify/cookie";
-import fastifySession from "@fastify/secure-session";
 import * as dotenv from "dotenv";
+dotenv.config();
+
+import fastifyCors from "@fastify/cors";
+import fastifySession from "@fastify/secure-session";
 import Fastify from "fastify";
 import type { RouteShorthandOptions } from "fastify/types/route";
 import { FromSchema } from "json-schema-to-ts";
 import {
   COOKIE_NAME,
+  CORS_ORIGIN_URL,
   PRODUCTION,
   SESSION_KEY,
   SESSION_SECRET,
   SESSION_TTL,
 } from "./constants";
 
-dotenv.config();
-
 const fastify = Fastify({
-  logger: true,
+  logger: PRODUCTION,
 });
 
-fastify.register(fastifyCookie);
+console.log(CORS_ORIGIN_URL);
+console.log(PRODUCTION);
+console.log(COOKIE_NAME);
+console.log(SESSION_TTL);
+console.log(SESSION_SECRET);
+
+fastify.register(fastifyCors, {
+  origin: CORS_ORIGIN_URL,
+  credentials: true,
+});
 fastify.register(fastifySession, {
+  cookieName: COOKIE_NAME,
   secret: SESSION_SECRET,
   salt: SESSION_SECRET.substring(3, 19),
-  cookieName: COOKIE_NAME,
   cookie: {
-    secure: PRODUCTION,
+    secure: PRODUCTION ? true : undefined,
     httpOnly: true,
-    sameSite: PRODUCTION ? "lax" : "none",
+    sameSite: PRODUCTION ? "lax" : undefined,
     maxAge: SESSION_TTL,
   },
 });
@@ -81,14 +91,14 @@ fastify.post<{ Body: FromSchema<typeof login> }>(
     const { username } = request.body;
 
     if (username !== "admin") {
-      return reply.status(403).send({
+      reply.status(403).send({
         error: "invalid user",
       });
     }
 
     request.session.set(SESSION_KEY, "user-id-12388123");
 
-    return reply.status(200).send({
+    reply.status(200).send({
       accessToken: "as08h13229e2",
       user: {
         email: "admin@email.com",
@@ -132,6 +142,8 @@ const meOpts: RouteShorthandOptions = {
 fastify.get("/me", meOpts, async (request, reply) => {
   const user = request.session.get(SESSION_KEY);
 
+  console.log(user);
+
   if (!user) {
     return reply.status(400).send({
       error: "not authenticated",
@@ -147,16 +159,13 @@ fastify.get("/me", meOpts, async (request, reply) => {
 });
 
 // logout
-fastify.get("/logout", async (request) => {
-  return new Promise((resolve) => {
-    try {
-      request.session.delete();
-      resolve(true);
-      return;
-    } catch {
-      resolve(false);
-    }
-  });
+fastify.post("/logout", async (request, reply) => {
+  try {
+    request.session.set(SESSION_KEY, null);
+    return reply.send("logged out");
+  } catch {
+    return reply.send("fail during log out process");
+  }
 });
 
 // init
